@@ -1,0 +1,85 @@
+---
+title       : Telecom Customers Churn Prediction
+subtitle    : Predicting using an Shiny App
+author      : Michael Chen
+job         : System Analyst
+framework   : io2012        # {io2012, html5slides, shower, dzslides, ...}
+highlighter : highlight.js  # {highlight.js, prettify, highlight}
+hitheme     : tomorrow      # 
+widgets     : []            # {mathjax, quiz, bootstrap}
+mode        : selfcontained # {standalone, draft}
+knit        : slidify::knit2slides
+---
+
+
+## App Introduction
+
+
+This Shiny app was built up to help telecom companies to predict which current existing customers have the potential of churning by using detailed account information of those customers. Through predicting the potential churn, the telecom company may be able to act in advance to try to keep those customers by providing some attractive service promotions or some sort of discounts, this is indeed necessary and essential for business growth in this much competitive and aggressive market. 
+
+The predicton model embeded in this App was trained using Random Forest algorithm on the dataset provided by http://www.sgi.com/tech/mlc/db/, all the data are based on claims similar to real world. Let's go exploring how this was materialized!
+
+---
+
+## Downloading Model Training Data
+
+The data file URLs are listed as below:
+
+```r
+fileUrl <- "http://www.sgi.com/tech/mlc/db/churn.names"
+fileUrl2 <- "http://www.sgi.com/tech/mlc/db/churn.data"
+fileUrl3 <- "http://www.sgi.com/tech/mlc/db/churn.test"
+```
+* *churn.names* -- Records the variable names;
+* *churn.data*  -- Training data set;
+* *churn.test*  -- Testing data set.
+
+
+```r
+# downloading data sets
+download.file(fileUrl, destfile = "./data/churnName.csv", method = "curl")
+download.file(fileUrl2, destfile = "./data/churnTrain.csv", method = "curl")
+download.fiel(fileUrl3, destfile = "./data/churnTest.csv", method = "curl")
+```
+
+---
+
+## Data Preprocessing
+
+Loading the data from the files to R:
+
+```r
+dfNamesOri <- read.csv("churnName.csv", header = F, skip = 4)  # skip the top 4 rows for they are just comment
+training <- read.csv("churnTrain.csv", header = F)
+testing <- read.csv("churnTest.csv", header = F)
+
+# Variable names need some transformation:
+dfNames <- dfNamesOri$V1
+dfNames <- c(gsub(" ", ".", gsub(":.*", "", dfNames)), "churn")
+
+# Applying the variable names to each data set:
+names(training) <- dfNames
+names(testing) <- dfNames
+
+# Set the class variable 'churn' as binary (only 0 and 1) factor vector:
+training$churn <- as.factor(1*(training$churn == " True."))
+testing$churn <- as.factor(1*(testing$churn == " True."))
+```
+
+---
+
+## Model Training and Manipulation
+
+For classification problems, one of the most accurate and effective models is Random Forest, let's use it from the **caret** package:
+
+
+```r
+library(caret)
+set.seed(10105)
+rfMod <- train(churn ~ ., data = training[, -c(1, 3, 4)], method = "rf")
+# check accuracy rate
+confusionMatrix(rfPred, testing[, "churn"])
+```
+
+The accuracy rate of this model is 0.959 and Kappa rate is 0.80, very good predicting accuracy rate based on this data set, thus this model can be used. To make this trained model accessible by Shiny app, I saved it into a Rdata file and uploaded it up to my github [churnModel.Rdata](https://github.com/MichaelChen1004/ChurnPrediction), the predictive feature of my Shiny App was built up based upon it.
+
